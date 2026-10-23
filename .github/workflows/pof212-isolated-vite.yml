@@ -1,0 +1,77 @@
+name: PoF2.12 Isolated Vite Multi-Chunk
+on:
+  push:
+    branches: [feat/pof212-vite-isolated-origin]
+    paths:
+      - 'pof212/**'
+      - '.github/workflows/pof212-isolated-vite.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: pof212-synthetic-validation
+  cancel-in-progress: true
+jobs:
+  bounded-static-proof:
+    if: github.repository_visibility == 'public'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - name: Read-only checkout of synthetic validation repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Setup Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Verify pinned synthetic source inputs
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,pathlib
+          refs=json.loads(pathlib.Path('fixture_sha256.json').read_text())['files']
+          for file,digest in refs.items():
+            assert hashlib.sha256(pathlib.Path(file).read_bytes()).hexdigest()==digest,file
+          print('PASS source SHA256:',len(refs))
+          PY
+      - name: Official Vite CLI build with fresh fixture lockfile
+        working-directory: fixtures/vite
+        run: |
+          set -euo pipefail
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build
+          test -s dist/index.html
+          npm ls --depth=0
+          node --version | tee ../../pof212-node-version.txt
+          npm --version | tee ../../pof212-npm-version.txt
+      - name: Install Chromium
+        timeout-minutes: 5
+        run: ./fixtures/vite/node_modules/.bin/playwright install chromium
+      - name: Official Vite multi-chunk and cross-site browser proof
+        timeout-minutes: 5
+        run: node pof212/browser_proof.mjs
+      - name: Record fresh artifact SHA256 inventory
+        if: always()
+        run: |
+          mkdir -p results
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,json
+          base=Path('fixtures/vite/dist')
+          files={str(p.relative_to(base)):{'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'bytes':p.stat().st_size} for p in sorted(base.rglob('*')) if p.is_file()}
+          lock=Path('fixtures/vite/package-lock.json')
+          Path('results/pof212-build-inventory.json').write_text(json.dumps({'files':files,'lock_sha256':hashlib.sha256(lock.read_bytes()).hexdigest() if lock.exists() else None},indent=2))
+          PY
+      - name: Archive evidence only, no deployment
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: pof212-vite-multichunk-isolated-evidence
+          path: |
+            results/
+            fixtures/vite/package-lock.json
+            pof212-node-version.txt
+            pof212-npm-version.txt
+          retention-days: 7
+          if-no-files-found: warn
