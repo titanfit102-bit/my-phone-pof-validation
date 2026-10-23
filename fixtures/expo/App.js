@@ -1,0 +1,2 @@
+import React from 'react';import {View,Text,Pressable,Image} from 'react-native';
+export default function App(){const[n,setN]=React.useState(0);return <View style={{padding:20,backgroundColor:'#f0f4fb',minHeight:'100%'}}><Text testID="pof-title" style={{fontSize:20}}>Expo Web official build fixture</Text><Pressable testID="pof-counter" onPress={()=>setN(n+1)}><Text>Count: {n}</Text></Pressable><Image testID="pof-expo-img" accessibilityLabel="PoF Expo image fixture" source={require('./assets/pixel.png')} style={{width:24,height:24}}/></View>}

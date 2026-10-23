@@ -1,0 +1,108 @@
+name: PoF2.9 Official Expo Vite Proof
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/pof29-official-proof.yml'
+      - 'fixtures/**'
+      - 'browser_smoke.mjs'
+      - 'fixture_sha256.json'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: pof29-synthetic-proof
+  cancel-in-progress: true
+jobs:
+  synthetic-official-builds:
+    if: github.repository_visibility == 'public'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      CI: 'true'
+    steps:
+      - name: Checkout only this isolated validation repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Setup Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Verify immutable synthetic fixture inputs
+        run: |
+          python3 - <<'PY'
+          import json,hashlib,pathlib,zlib,struct
+          manifest=json.loads(pathlib.Path('fixture_sha256.json').read_text())['files']
+          for filename,expected in manifest.items():
+              data=pathlib.Path(filename).read_bytes()
+              actual=hashlib.sha256(data).hexdigest()
+              assert actual == expected,(filename,actual,expected)
+              if filename.endswith('.png'):
+                  assert data[:8] == b'\x89PNG\r\n\x1a\n'
+                  offset=8; compressed=b''
+                  while offset < len(data):
+                      size=struct.unpack('>I',data[offset:offset+4])[0]
+                      tag=data[offset+4:offset+8]
+                      chunk=data[offset+8:offset+8+size]
+                      crc=struct.unpack('>I',data[offset+8+size:offset+12+size])[0]
+                      assert zlib.crc32(tag+chunk)&0xffffffff == crc,filename
+                      if tag==b'IDAT':compressed+=chunk
+                      offset+=12+size
+                  zlib.decompress(compressed)
+          print('PASS input SHA256 and PNG integrity:',len(manifest))
+          PY
+      - name: Official builds with fresh fixture-specific lockfiles
+        run: |
+          set -euo pipefail
+          mkdir -p results
+          node --version | tee results/node-version.txt
+          npm --version | tee results/npm-version.txt
+          for name in vite expo; do
+            (
+              cd "fixtures/$name"
+              npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+              npm ci --ignore-scripts --no-audit --no-fund
+              if [ "$name" = "vite" ]; then
+                npm run build
+              else
+                npm run export:web
+              fi
+              test -s dist/index.html
+              npm ls --depth=0 --json > "../../results/$name-resolved-dependencies.json"
+              cp package-lock.json "../../results/$name-package-lock.json"
+              find dist -type f -print0 | sort -z | xargs -0 sha256sum > "../../results/$name-dist-sha256.txt"
+            )
+          done
+      - name: Install Chromium for official browser smoke
+        run: ./fixtures/vite/node_modules/.bin/playwright install --with-deps chromium
+      - name: Render both official builds in isolated iframes
+        run: node browser_smoke.mjs
+      - name: Generate artifact inventory and SHA256
+        if: always()
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,json
+          root=Path('results');root.mkdir(exist_ok=True)
+          all_files=[]
+          for sub in (Path('fixtures/vite/dist'),Path('fixtures/expo/dist'),root):
+              if not sub.exists():continue
+              for f in sorted(sub.rglob('*')):
+                  if f.is_file() and not f.is_symlink():
+                      all_files.append(dict(path=f.as_posix(),bytes=f.stat().st_size,sha256=hashlib.sha256(f.read_bytes()).hexdigest()))
+          (root/'manifest-sha256.json').write_text(json.dumps({'files':all_files},indent=2))
+          PY
+      - name: Preserve official outputs, logs and versions
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: pof29-official-expo-vite-evidence
+          path: |
+            results/
+            fixtures/vite/dist/
+            fixtures/expo/dist/
+            fixtures/vite/package-lock.json
+            fixtures/expo/package-lock.json
+          retention-days: 7
+          if-no-files-found: warn

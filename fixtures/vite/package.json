@@ -1,0 +1,19 @@
+{
+  "name": "my-phone-pof2-vite-source-fixture",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1"
+  },
+  "dependencies": {
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  },
+  "devDependencies": {
+    "vite": "^7.0.0",
+    "typescript": "~5.9.0",
+    "@playwright/test": "1.64.1"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "source": "MY_PHONE_POF28_HARDENED_BROWSER_RUNNER_KIT_2026-10-23.zip",
+  "source_sha256": "1a237ae9c3aabdae6e33531ec567048779bd4adaa0d3fb8af6e6de6804f8ad65",
+  "files": {
+    "fixtures/expo/App.js": "c7f92280e872d77f6b2d551b632bf2cb5917d6e39875694517e51d332e9717c6",
+    "fixtures/expo/app.json": "a307ee209fc21ea65c7c9d6fef2587266d25caea5b3eff377795da552ba9850e",
+    "fixtures/expo/assets/pixel.png": "1ae4f8becc95268c6342bad0bbb4ae69062b1dd6707980455e94ef0ad87c8ad7",
+    "fixtures/expo/package.json": "0414b97c99c9d502e35dd02f85b5065b96bfc6ce3d6e8a095fbfbbbfae7f1b7e",
+    "fixtures/vite/index.html": "76b96bdc14c2f015ba22d40a50ed9fe32297da6c1ed518e43b5a44ddae9965c7",
+    "fixtures/vite/package.json": "30b396ba75291064b7832fd31ac1ba5f62152fb10e75beafa325efedce67ec33",
+    "fixtures/vite/public/pixel.png": "1ae4f8becc95268c6342bad0bbb4ae69062b1dd6707980455e94ef0ad87c8ad7",
+    "fixtures/vite/src/lazy.js": "e5330aaaa8f96fad8fd1b505f5eb170f7579d1cc90558592c094028ca5287600",
+    "fixtures/vite/src/main.jsx": "d55fce8629e3b4d22368d4aa878f8c61d7d2b5fb5243fee314b8504836f09a05",
+    "fixtures/vite/src/shared.js": "3d186ff0ff3ddaaf657a948b2e4e068cb789630c76e3124f1a74a897f79670a2",
+    "fixtures/vite/src/style.css": "4c7f1d92baacdb4ab2fe4b14132d32792699184050171fe6c9f3e264510d5e6c"
+  }
+}

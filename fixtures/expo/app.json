@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "PoF2 Expo Fixture",
+    "slug": "my-phone-pof2-expo",
+    "version": "0.0.1",
+    "platforms": [
+      "web"
+    ],
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    }
+  }
+}
