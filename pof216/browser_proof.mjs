@@ -40,10 +40,10 @@ try{
  const frame=await append(p,A.url,"authorized");
  let rendered=false;
  try{await frame.locator("#pof-header").waitFor({timeout:9500});rendered=true}catch(e){reason=String(e.message||e).slice(0,200)}
- const entry=A.events.find(e=>e.path==="/index.html");
+ const entry=A.events.filter(e=>e.path==="/index.html").at(-1);
  note("Secure cookie accompanies sandboxed iframe document",entry?.authenticated?"PASS":"FAIL",JSON.stringify({status:entry?.status,cookiePresent:entry?.cookiePresent}));
  note("Credentialed ESM entry renders",rendered?"PASS":"FAIL",rendered?"Official Vite entry mounted":reason);
- let chunk=false,png=false,opaque=false;
+ let chunk=false,png=false,cssLoaded=false,opaque=false;
  if(rendered){
   try{await frame.locator("#pof-load").click();await frame.locator("#pof-status").getByText(/CHUNK READY/).waitFor({timeout:9000});
    chunk=A.events.some(e=>/\/assets\/lazy-.*\.js$/.test(e.path)&&e.status===200&&e.authenticated);
@@ -51,6 +51,9 @@ try{
   note("Dynamic import ESM chunk with cookie",chunk?"PASS":"FAIL",reason);
   try{png=await frame.locator("#pof-img").evaluate(async img=>{await img.decode();return img.naturalWidth===2})}catch{}
   note("PNG asset decoded",png?"PASS":"FAIL");
+  const cssRequests=A.events.filter(e=>e.path.endsWith(".css"));
+  cssLoaded=cssRequests.some(e=>e.status===200&&e.authenticated);
+  note("CSS loaded with authenticated asset request",cssLoaded?"PASS":"FAIL",JSON.stringify(cssRequests.map(e=>({status:e.status,auth:e.authenticated}))));
   const isolation=await frame.locator("body").evaluate(()=>{
    let parentDenied=false,storageDenied=false;
    try{void parent.document.querySelector("#host-secret")}catch{parentDenied=true}
@@ -66,6 +69,7 @@ try{
  await p.goto(parent.origin+"/attack");
  await p.evaluate(()=>{const f=document.createElement("iframe");f.title="untrusted-opaque";f.setAttribute("sandbox","allow-scripts");f.srcdoc="<!doctype html><body>UNTRUSTED</body>";document.body.append(f)});
  const evil=p.frameLocator('iframe[title="untrusted-opaque"]');
+ const beforeSiblingEvents=A.events.length;
  await evil.locator("body").waitFor();
  const entryJs=A.events.find(e=>/\/assets\/index-.*\.js$/.test(e.path))?.path||"/assets/not-found.js";
  let sibling={readable:false,status:0};
@@ -76,7 +80,7 @@ try{
    catch(e){return {readable:false,status:0,error:String(e).slice(0,140)}}
   },A.origin+entryJs);
  }catch(e){sibling={readable:false,status:0,error:String(e).slice(0,140)}}
- note("Untrusted opaque sibling frame reads A's script",sibling.readable?"CRITICAL_LEAK":"BLOCKED_OR_UNPROVEN",JSON.stringify(sibling));
+ note("Untrusted opaque sibling frame reads A's script",sibling.readable?"CRITICAL_LEAK":"BLOCKED_OR_UNPROVEN",JSON.stringify({...sibling,originReached:A.events.length>beforeSiblingEvents}));
  if(sibling.readable)findings.push("CRITICAL: opaque sibling with same browser cookie can read authenticated JS via ACAO:null and ACAC:true");
  else findings.push("Sibling read was not demonstrated; absence of exploit in this configuration is NOT security proof");
  const other=await browser.newContext({ignoreHTTPSErrors:true});contexts.push(other);
@@ -95,7 +99,7 @@ try{
  note("Minimal in-memory blob dynamic import in opaque iframe",localModule?"PASS":"FAIL",reason);
  await off.close();
  result={status:"EXPERIMENT_COMPLETED_PRIVATE_NO_GO",checks,findings,
-  results:{cookieInstalled:cookiesInstalled,htmlCookieSeen:Boolean(entry?.authenticated),credentialedEsmRendered:rendered,dynamicChunkCookieAuth:chunk,imageDecoded:png,opaqueIsolation:opaque,
+  results:{cookieInstalled:cookiesInstalled,htmlCookieSeen:Boolean(entry?.authenticated),credentialedEsmRendered:rendered,dynamicChunkCookieAuth:chunk,imageDecoded:png,cssAssetAuthenticated:cssLoaded,fullArtifactLoaded:rendered&&chunk&&png&&cssLoaded,opaqueIsolation:opaque,
    copiedUrlDeniedInFreshBrowser:copied?.status()===401,untrustedOpaqueSiblingRead:sibling.readable,anonymousModulesRendered:anonymousRender,localBlobEsm:localModule},
   releaseGates:{production:"NO_GO",crossOpaqueOriginConfidentiality:"NOT_PROVEN",identityBoundPerAsset:"NOT_PROVEN",realLogin:"NOT_IMPLEMENTED",multibrowser:"NOT_RUN"},
   warnings:["Cookies injected by Playwright; no real login or server-side identity provider was implemented.",
