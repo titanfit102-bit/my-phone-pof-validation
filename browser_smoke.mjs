@@ -20,7 +20,7 @@ async function serve(folder){
       const target=path.resolve(dir,'.'+(pathname==='/'?'/index.html':pathname));
       if(!target.startsWith(dir+path.sep)){response.writeHead(403).end();return}
       const body=await fs.readFile(target);
-      response.writeHead(200,{'Content-Type':mime[path.extname(target)]||'application/octet-stream','Access-Control-Allow-Origin':'*','Cross-Origin-Resource-Policy':'cross-origin','Cache-Control':'no-store','Content-Security-Policy':"default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data: blob:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"});
+      response.writeHead(200,{'Content-Type':mime[path.extname(target)]||'application/octet-stream','Access-Control-Allow-Origin':'*','Cross-Origin-Resource-Policy':'cross-origin','Cache-Control':'no-store','Content-Security-Policy':"default-src 'none'; script-src "+('http://127.0.0.1:'+server.address().port)+"; style-src "+('http://127.0.0.1:'+server.address().port)+" 'unsafe-inline'; img-src "+('http://127.0.0.1:'+server.address().port)+" data: blob:; font-src "+('http://127.0.0.1:'+server.address().port)+" data: blob:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"});
       response.end(body);
     }catch(error){response.writeHead(404).end()}
   });
