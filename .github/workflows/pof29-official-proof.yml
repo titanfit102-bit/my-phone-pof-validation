@@ -11,7 +11,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: pof29-synthetic-proof
+  group: pof29-browser-only-bounded
   cancel-in-progress: true
 jobs:
   synthetic-official-builds:
