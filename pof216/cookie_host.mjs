@@ -29,7 +29,8 @@ export async function cookieArtifactHost({tls,dist,ip,tenant,studioOrigin,script
    const html=bytes.toString("utf8");
    if(!/type="module" crossorigin/.test(html))throw Error("Vite fixture script not found");
    bytes=Buffer.from(scriptMode==="credentialed"?
-     html.replace('type="module" crossorigin','type="module" crossorigin="use-credentials"'):html);
+     html.replace('type="module" crossorigin','type="module" crossorigin="use-credentials"')
+         .replace('rel="stylesheet" crossorigin','rel="stylesheet" crossorigin="use-credentials"'):html);
   }
   const type=mime[url.slice(url.lastIndexOf("."))]||"application/octet-stream";
   assets.set(url,{bytes,digest:hash(bytes),type});
