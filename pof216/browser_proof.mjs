@@ -33,7 +33,7 @@ try{
  browser=await chromium.launch({headless:true});
  const owner=await browser.newContext({ignoreHTTPSErrors:true});contexts.push(owner);
  let cookiesInstalled=false,reason="";
- try{await owner.addCookies([{...A.mockCookie(),partitionKey:"https://127.0.0.1"}]);cookiesInstalled=(await owner.cookies(A.url)).some(c=>c.name===A.cookieName)}
+ try{const {url,...c}=A.mockCookie();await owner.addCookies([{...c,domain:new URL(url).hostname,partitionKey:"https://127.0.0.1"}]);cookiesInstalled=(await owner.cookies(A.url)).some(c=>c.name===A.cookieName)}
  catch(e){reason=String(e.message||e).slice(0,240)}
  note("Partitioned HttpOnly Secure cookie accepted",cookiesInstalled?"PASS":"FAIL",reason);
  const p=await owner.newPage();await p.goto(parent.origin);
@@ -80,7 +80,7 @@ try{
  if(sibling.readable)findings.push("CRITICAL: opaque sibling with same browser cookie can read authenticated JS via ACAO:null and ACAC:true");
  else findings.push("Sibling read was not demonstrated; absence of exploit in this configuration is NOT security proof");
  const other=await browser.newContext({ignoreHTTPSErrors:true});contexts.push(other);
- let otherCookie=false;try{await other.addCookies([{...B.mockCookie(),partitionKey:"https://127.0.0.1"}]);otherCookie=true}catch{}
+ let otherCookie=false;try{const {url,...c}=B.mockCookie();await other.addCookies([{...c,domain:new URL(url).hostname,partitionKey:"https://127.0.0.1"}]);otherCookie=true}catch{}
  const pB=await other.newPage();await pB.goto(parent.origin);const fB=await append(pB,B.url,"anonymous-modules");
  let anonymousRender=false;try{await fB.locator("#pof-header").waitFor({timeout:4000});anonymousRender=true}catch{}
  note("Anonymous crossorigin entry does not render when module requires cookies",!anonymousRender?"PASS_EXPECTED_DENIAL":"UNEXPECTED_RENDER",JSON.stringify({otherCookie,anonymousRender}));
